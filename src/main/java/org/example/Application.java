@@ -69,12 +69,14 @@ public class Application {
         EventPrinter.print(events);
         // 처리 결과를 kafka "feedback" topic 에 발행
         for (Event event : events) {
-          StreamEvent streamEvent = StreamEvent.toEvent(event.getData());
+          AppFeedback appFeedback = AppFeedback.toFeedback(event.getData());
           // 피드백 한다
-          template.send("feedback", streamEvent.toString());
+          if(!appFeedback.getIsFiltered()) {
+            template.send("feedback", appFeedback.toString());
+          }
           // 피드백 완료한 이벤트를 커밋 처리 한다.
-          TopicPartition topicPartition = new TopicPartition(streamEvent.getTopic(), streamEvent.getPartition());
-          OffsetAndMetadata offsetAndMetadata = new OffsetAndMetadata(streamEvent.getOffset());
+          TopicPartition topicPartition = new TopicPartition(appFeedback.getTopic(), appFeedback.getPartition());
+          OffsetAndMetadata offsetAndMetadata = new OffsetAndMetadata(appFeedback.getOffset());
           consumer.commitSync(Collections.singletonMap(topicPartition, offsetAndMetadata));
         }
       }
@@ -93,13 +95,13 @@ public class Application {
       ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
       records.forEach(record -> {
         try {
-          StreamEvent streamEvent = StreamEvent.toEvent(
+          AppEvent appEvent = AppEvent.toEvent(
               record.topic(),
               record.partition(),
               record.offset(),
               record.value()
           );
-          inputHandler.send(streamEvent.toArray());
+          inputHandler.send(appEvent.toArray());
         } catch (InterruptedException e) {
           throw new RuntimeException(e);
         }

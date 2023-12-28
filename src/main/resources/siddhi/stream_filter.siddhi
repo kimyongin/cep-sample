@@ -1,6 +1,6 @@
 define stream InputStream (topic string, partition int, offset long, symbol string, price float, volume long);
 
 @info(name = 'query1')
-from InputStream[volume < 150]
-select topic, partition, offset, symbol, price, volume
+from InputStream
+select topic, partition, offset, symbol, price, volume, volume < 150 as isFiltered
 insert into OutputStream;
